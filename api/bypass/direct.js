@@ -13,9 +13,10 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
 
   if (req.method === "OPTIONS") {
-    return res.status(200).end();
+    return res.status(200).json({ status: "success" });
   }
 
   if (req.method !== "POST") {
@@ -51,7 +52,6 @@ export default async function handler(req, res) {
   }
 
   if (!BT_API_KEY) {
-    console.error("BT_API_KEY is missing in environment");
     return res.status(500).json({
       status: "error",
       message: "Server misconfigured"
@@ -71,16 +71,22 @@ export default async function handler(req, res) {
       })
     });
 
-    const text = await upstream.text();
+    const raw = await upstream.text();
 
-    console.log("bypass.tools status:", upstream.status);
-    console.log("bypass.tools body:", text);
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return res.status(502).json({
+        status: "error",
+        message: "Upstream returned non-JSON",
+        upstreamStatus: upstream.status,
+        raw
+      });
+    }
 
-    res.status(upstream.status);
-    res.setHeader("Content-Type", "application/json");
-    return res.send(text);
+    return res.status(upstream.status).json(data);
   } catch (err) {
-    console.error("Proxy failed:", err);
     return res.status(500).json({
       status: "error",
       message: err?.message || "Proxy failed"
