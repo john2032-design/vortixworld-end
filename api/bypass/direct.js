@@ -1,3 +1,7 @@
+export const config = {
+  runtime: "nodejs"
+};
+
 import { verifyAccess } from "../../lib/auth.js";
 import { validateUrl } from "../../lib/validate.js";
 
@@ -6,9 +10,19 @@ const BT_API_KEY = process.env.BT_API_KEY;
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Cache-Control", "no-store");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      status: "error",
+      message: "Method not allowed"
+    });
   }
 
   const session = verifyAccess(req);
@@ -21,7 +35,7 @@ export default async function handler(req, res) {
 
   const { url, refresh = false } = req.body || {};
 
-  if (!url) {
+  if (typeof url !== "string" || !url.trim()) {
     return res.status(400).json({
       status: "error",
       message: "Missing URL"
@@ -33,6 +47,14 @@ export default async function handler(req, res) {
     return res.status(400).json({
       status: "error",
       message: check.error
+    });
+  }
+
+  if (!BT_API_KEY) {
+    console.error("BT_API_KEY is missing in environment");
+    return res.status(500).json({
+      status: "error",
+      message: "Server misconfigured"
     });
   }
 
@@ -49,13 +71,19 @@ export default async function handler(req, res) {
       })
     });
 
-    const data = await upstream.json();
+    const text = await upstream.text();
 
-    return res.status(upstream.status).json(data);
-  } catch {
+    console.log("bypass.tools status:", upstream.status);
+    console.log("bypass.tools body:", text);
+
+    res.status(upstream.status);
+    res.setHeader("Content-Type", "application/json");
+    return res.send(text);
+  } catch (err) {
+    console.error("Proxy failed:", err);
     return res.status(500).json({
       status: "error",
-      message: "Proxy failed"
+      message: err?.message || "Proxy failed"
     });
   }
 }
