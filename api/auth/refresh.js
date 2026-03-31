@@ -2,54 +2,50 @@ export const config = {
   runtime: "nodejs"
 };
 
-import { signAccessToken, verifyRefreshToken } from "../../lib/auth.js";
+import { verifyRefresh, signAccess } from "../../lib/auth.js";
 
-function sendJson(res, statusCode, body) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
-  return res.status(statusCode).json(body);
-}
-
-export default function handler(req, res) {
-  if (req.method === "OPTIONS") {
-    return sendJson(res, 200, { status: "success" });
-  }
-
-  if (req.method !== "POST") {
-    return sendJson(res, 405, {
-      status: "error",
-      message: "Method not allowed"
-    });
-  }
-
+export default async function handler(req, res) {
   try {
-    const { refreshToken } = req.body || {};
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
-    if (!refreshToken || typeof refreshToken !== "string") {
-      return sendJson(res, 400, {
+    if (req.method === "OPTIONS") {
+      return res.status(200).end();
+    }
+
+    const cookie = req.headers.cookie || "";
+    const match = cookie.match(/refresh_token=([^;]+)/);
+    const token = match ? match[1] : null;
+
+    if (!token) {
+      return res.status(401).json({
         status: "error",
         message: "Missing refresh token"
       });
     }
 
-    const sessionId = verifyRefreshToken(refreshToken);
+    const sessionId = verifyRefresh(token);
+
     if (!sessionId) {
-      return sendJson(res, 401, {
+      return res.status(401).json({
         status: "error",
         message: "Invalid refresh token"
       });
     }
 
-    return sendJson(res, 200, {
+    const accessToken = signAccess(sessionId);
+
+    return res.status(200).json({
       status: "success",
-      accessToken: signAccessToken(sessionId),
+      accessToken,
       expiresIn: 900
     });
   } catch (err) {
-    console.error("refresh error:", err);
-    return sendJson(res, 500, {
+    console.error("REFRESH ERROR:", err);
+
+    return res.status(500).json({
       status: "error",
       message: "Refresh failed"
     });
