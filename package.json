@@ -1,7 +1,6 @@
 {
-  "name": "vortixworld-backend",
+  "name": "vortix-bypass-backend",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
   "dependencies": {
     "jsonwebtoken": "^9.0.2"
