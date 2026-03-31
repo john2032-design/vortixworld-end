@@ -5,8 +5,6 @@ export const config = {
 import { verifyAccess } from "../../lib/auth.js";
 import { validateUrl } from "../../lib/validate.js";
 
-const BT_API_KEY = process.env.BT_API_KEY;
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -46,7 +44,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const { url, refresh = false } = body;
+  const { url } = body;
 
   if (!url) {
     return res.status(400).json({
@@ -65,21 +63,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const upstream = await fetch("https://api.bypass.tools/api/v1/bypass/direct", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": BT_API_KEY
-      },
-      body: JSON.stringify({
-        url: check.url,
-        refresh
-      })
-    });
+    const upstream = await fetch(
+      `https://lootlinkcom.vercel.app/api/bypass?url=${encodeURIComponent(check.url)}`
+    );
 
     const text = await upstream.text();
 
-    return res.status(upstream.status).send(text);
+    return res.status(200).send(text);
   } catch (err) {
     console.error("Proxy failed:", err);
 
