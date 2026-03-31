@@ -2,38 +2,43 @@ export const config = {
   runtime: "nodejs"
 };
 
-import { signAccess, signRefresh, newSession } from "../../lib/auth.js";
+import { newSessionId, signAccessToken, signRefreshToken } from "../../lib/auth.js";
 
-export default async function handler(req, res) {
+function sendJson(res, statusCode, body) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  return res.status(statusCode).json(body);
+}
+
+export default function handler(req, res) {
+  if (req.method === "OPTIONS") {
+    return sendJson(res, 200, { status: "success" });
+  }
+
+  if (req.method !== "POST") {
+    return sendJson(res, 405, {
+      status: "error",
+      message: "Method not allowed"
+    });
+  }
+
   try {
-    const sessionId = newSession();
+    const sessionId = newSessionId();
+    const accessToken = signAccessToken(sessionId);
+    const refreshToken = signRefreshToken(sessionId);
 
-    const accessToken = signAccess(sessionId);
-    const refreshToken = signRefresh(sessionId);
-
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-
-    if (req.method === "OPTIONS") {
-      return res.status(200).end();
-    }
-
-    res.setHeader("Set-Cookie", [
-      `refresh_token=${refreshToken}; HttpOnly; Path=/api/auth/refresh; Max-Age=1209600; SameSite=None; Secure`
-    ]);
-
-    return res.status(200).json({
+    return sendJson(res, 200, {
       status: "success",
       accessToken,
-      expiresIn: 900
+      refreshToken,
+      expiresIn: 900,
+      refreshExpiresIn: 1209600
     });
-
   } catch (err) {
-    console.error("ANON ERROR:", err);
-
-    return res.status(500).json({
+    console.error("anon error:", err);
+    return sendJson(res, 500, {
       status: "error",
       message: "Anon failed"
     });
