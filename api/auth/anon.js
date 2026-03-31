@@ -2,7 +2,27 @@ export const config = {
   runtime: "nodejs"
 };
 
-import { signAccess, signRefresh, newSession } from "../../lib/auth.js";
+import jwt from "jsonwebtoken";
+import { randomUUID } from "crypto";
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const REFRESH_SECRET = process.env.REFRESH_SECRET;
+
+function signAccess(sessionId) {
+  return jwt.sign(
+    { sub: sessionId, typ: "access" },
+    JWT_SECRET,
+    { expiresIn: "15m" }
+  );
+}
+
+function signRefresh(sessionId) {
+  return jwt.sign(
+    { sub: sessionId, typ: "refresh" },
+    REFRESH_SECRET,
+    { expiresIn: "14d" }
+  );
+}
 
 export default async function handler(req, res) {
   try {
@@ -10,13 +30,27 @@ export default async function handler(req, res) {
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Cache-Control", "no-store");
 
     if (req.method === "OPTIONS") {
       return res.status(200).end();
     }
 
-    const sessionId = newSession();
+    if (req.method !== "POST") {
+      return res.status(405).json({
+        status: "error",
+        message: "Method not allowed"
+      });
+    }
 
+    if (!JWT_SECRET || !REFRESH_SECRET) {
+      return res.status(500).json({
+        status: "error",
+        message: "Server misconfigured"
+      });
+    }
+
+    const sessionId = randomUUID();
     const accessToken = signAccess(sessionId);
     const refreshToken = signRefresh(sessionId);
 
