@@ -2,74 +2,62 @@ export const config = {
   runtime: "nodejs"
 };
 
-import { verifyAccess } from "../../lib/auth.js";
-import { validateUrl } from "../../lib/validate.js";
+import { verifyAccessToken } from "../../lib/auth.js";
+import { validateTargetUrl } from "../../lib/validate.js";
 
-const BT_API_KEY = process.env.BT_API_KEY;
-
-export default async function handler(req, res) {
+function sendJson(res, statusCode, body) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  return res.status(statusCode).json(body);
+}
 
+export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
-    return res.status(200).json({ status: "success" });
+    return sendJson(res, 200, { status: "success" });
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({
+    return sendJson(res, 405, {
       status: "error",
       message: "Method not allowed"
     });
   }
 
-  const session = verifyAccess(req);
-  if (!session) {
-    return res.status(401).json({
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  const sessionId = token ? verifyAccessToken(token) : null;
+
+  if (!sessionId) {
+    return sendJson(res, 401, {
       status: "error",
       message: "Unauthorized"
     });
   }
 
-  const { url, refresh = false } = req.body || {};
+  const { url } = req.body || {};
 
-  if (typeof url !== "string" || !url.trim()) {
-    return res.status(400).json({
+  if (!url || typeof url !== "string") {
+    return sendJson(res, 400, {
       status: "error",
-      message: "Missing URL"
+      message: "Missing url"
     });
   }
 
-  const check = validateUrl(url);
+  const check = validateTargetUrl(url);
   if (!check.ok) {
-    return res.status(400).json({
+    return sendJson(res, 400, {
       status: "error",
       message: check.error
     });
   }
 
-  if (!BT_API_KEY) {
-    return res.status(500).json({
-      status: "error",
-      message: "Server misconfigured"
-    });
-  }
-
   try {
-    const upstream = await fetch("https://api.bypass.tools/api/v1/bypass/direct", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": BT_API_KEY
-      },
-      body: JSON.stringify({
-        url: check.url,
-        refresh
-      })
-    });
+    const upstream = await fetch(
+      `https://lootlinkcom.vercel.app/api/bypass?url=${encodeURIComponent(check.url)}`
+    );
 
     const raw = await upstream.text();
 
@@ -77,19 +65,19 @@ export default async function handler(req, res) {
     try {
       data = JSON.parse(raw);
     } catch {
-      return res.status(502).json({
+      return sendJson(res, 502, {
         status: "error",
-        message: "Upstream returned non-JSON",
-        upstreamStatus: upstream.status,
+        result: "Upstream returned non-JSON",
         raw
       });
     }
 
-    return res.status(upstream.status).json(data);
+    return sendJson(res, upstream.status, data);
   } catch (err) {
-    return res.status(500).json({
+    console.error("proxy error:", err);
+    return sendJson(res, 500, {
       status: "error",
-      message: err?.message || "Proxy failed"
+      message: "Proxy failed"
     });
   }
 }
