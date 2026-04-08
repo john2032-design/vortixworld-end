@@ -12,7 +12,11 @@ const ALLOWED_TARGET_HOSTS = new Set([
   "mboost.me",
   "cuty.io",
   "rekonise.com",
-  "ouo.io"
+  "ouo.io",
+  "work.ink",
+  "new.pandadeveloment.net",
+  "pandadeveloment.net",
+  "auth.platorelay.com"
 ]);
 
 function verifyAccess(req) {
