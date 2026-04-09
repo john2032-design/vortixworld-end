@@ -16,7 +16,10 @@ const ALLOWED_TARGET_HOSTS = new Set([
   "work.ink",
   "new.pandadeveloment.net",
   "pandadeveloment.net",
-  "auth.platorelay.com"
+  "auth.platorelay.com",
+  "fast-links.org",
+  "rapid-links.com",
+  "rapid-links.net",
 ]);
 
 function verifyAccess(req) {
