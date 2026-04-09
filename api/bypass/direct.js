@@ -19,7 +19,7 @@ const ALLOWED_TARGET_HOSTS = new Set([
   "auth.platorelay.com",
   "fast-links.org",
   "rapid-links.com",
-  "rapid-links.net",
+  "rapid-links.net"
 ]);
 
 function verifyAccess(req) {
