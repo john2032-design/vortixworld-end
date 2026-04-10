@@ -20,7 +20,9 @@ const ALLOWED_TARGET_HOSTS = new Set([
   "rapid-links.com",
   "rapid-links.net",
   "lockr.so",
-  "link-unlocker.com"
+  "link-unlocker.com",
+  "pandadevelopment.net",
+  "new.pandadevelopment.net"
 ]);
 
 function verifyAccess(req) {
