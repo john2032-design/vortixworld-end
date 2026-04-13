@@ -1,23 +1,20 @@
-export const config = {
-  runtime: "nodejs"
-};
+export const config = { runtime: "nodejs" };
 
 import jwt from "jsonwebtoken";
+import { createPool } from "@vercel/postgres";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_SECRET = process.env.REFRESH_SECRET;
+const connectionString = process.env.APIKey_POSTGRES_URL;
+
+const pool = createPool({ connectionString });
 
 function signAccess(sessionId) {
-  return jwt.sign(
-    { sub: sessionId, typ: "access" },
-    JWT_SECRET,
-    { expiresIn: "15m" }
-  );
+  return jwt.sign({ sub: sessionId, typ: "access" }, JWT_SECRET, { expiresIn: "15m" });
 }
 
 function getCookieValue(cookieHeader, name) {
   if (!cookieHeader) return null;
-
   const parts = cookieHeader.split(";").map(v => v.trim());
   for (const part of parts) {
     const idx = part.indexOf("=");
@@ -26,7 +23,6 @@ function getCookieValue(cookieHeader, name) {
     const value = part.slice(idx + 1).trim();
     if (key === name) return value;
   }
-
   return null;
 }
 
@@ -40,6 +36,14 @@ function verifyRefresh(token) {
   }
 }
 
+async function isSessionValid(sessionId) {
+  const result = await pool.sql`
+    SELECT consumed FROM sessions WHERE session_id = ${sessionId}
+  `;
+  if (result.rowCount === 0) return false;
+  return result.rows[0].consumed === 0;
+}
+
 export default async function handler(req, res) {
   try {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -48,55 +52,25 @@ export default async function handler(req, res) {
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader("Cache-Control", "no-store");
 
-    if (req.method === "OPTIONS") {
-      return res.status(200).end();
-    }
-
-    if (req.method !== "POST") {
-      return res.status(405).json({
-        status: "error",
-        message: "Method not allowed"
-      });
-    }
-
-    if (!JWT_SECRET || !REFRESH_SECRET) {
-      return res.status(500).json({
-        status: "error",
-        message: "Server misconfigured"
-      });
+    if (req.method === "OPTIONS") return res.status(200).end();
+    if (req.method !== "POST") return res.status(405).json({ status: "error", message: "Method not allowed" });
+    if (!JWT_SECRET || !REFRESH_SECRET || !connectionString) {
+      return res.status(500).json({ status: "error", message: "Server misconfigured" });
     }
 
     const token = getCookieValue(req.headers.cookie || "", "refresh_token");
-
-    if (!token) {
-      return res.status(401).json({
-        status: "error",
-        message: "Missing refresh token"
-      });
-    }
+    if (!token) return res.status(401).json({ status: "error", message: "Missing refresh token" });
 
     const sessionId = verifyRefresh(token);
+    if (!sessionId) return res.status(401).json({ status: "error", message: "Invalid refresh token" });
 
-    if (!sessionId) {
-      return res.status(401).json({
-        status: "error",
-        message: "Invalid refresh token"
-      });
-    }
+    const valid = await isSessionValid(sessionId);
+    if (!valid) return res.status(401).json({ status: "error", message: "Session already used" });
 
     const accessToken = signAccess(sessionId);
-
-    return res.status(200).json({
-      status: "success",
-      accessToken,
-      expiresIn: 900
-    });
+    return res.status(200).json({ status: "success", accessToken, expiresIn: 900 });
   } catch (err) {
     console.error("REFRESH ERROR:", err);
-
-    return res.status(500).json({
-      status: "error",
-      message: "Refresh failed"
-    });
+    return res.status(500).json({ status: "error", message: "Refresh failed" });
   }
 }
