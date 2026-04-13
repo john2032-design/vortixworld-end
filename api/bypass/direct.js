@@ -82,7 +82,7 @@ async function validateApiKey(apiKey) {
     const res = await fetch(`https://apikey-nine.vercel.app/api/key/info/${apiKey}`);
     const data = await res.json();
     console.log("[validateApiKey] Key:", apiKey.slice(0, 8) + "...", "Response:", data);
-    return data.valid === "true";
+    return data.valid === true;
   } catch (err) {
     console.error("[validateApiKey] Fetch error:", err);
     return false;
