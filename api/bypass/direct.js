@@ -81,8 +81,10 @@ async function validateApiKey(apiKey) {
   try {
     const res = await fetch(`https://apikey-nine.vercel.app/api/key/info/${apiKey}`);
     const data = await res.json();
+    console.log("[validateApiKey] Key:", apiKey.slice(0, 8) + "...", "Response:", data);
     return data.valid === "true";
-  } catch {
+  } catch (err) {
+    console.error("[validateApiKey] Fetch error:", err);
     return false;
   }
 }
@@ -129,7 +131,9 @@ export default async function handler(req, res) {
     });
   }
 
-  const apiKey = req.headers["x-vw-api-key"];
+  const apiKey = req.headers["x-vw-api-key"] || req.headers["X-VW-API-Key"] || "";
+  console.log("[bypass/direct] Received API key:", apiKey ? apiKey.slice(0, 8) + "..." : "MISSING");
+
   const isKeyValid = await validateApiKey(apiKey);
   if (!isKeyValid) {
     return res.status(401).json({
