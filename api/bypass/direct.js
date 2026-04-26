@@ -22,7 +22,9 @@ const ALLOWED_TARGET_HOSTS = new Set([
   "lockr.so",
   "link-unlocker.com",
   "pandadevelopment.net",
-  "new.pandadevelopment.net"
+  "new.pandadevelopment.net",
+  "cuttlinks.com",
+  "trigonevo.com"
 ]);
 
 const usedTokens = new Map();
