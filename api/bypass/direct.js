@@ -24,6 +24,7 @@ const ALLOWED_TARGET_HOSTS = new Set([
   "pandadevelopment.net",
   "new.pandadevelopment.net",
   "cuttlinks.com",
+  "cuttlinks.com",
   "trigonevo.com"
 ]);
 
