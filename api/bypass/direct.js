@@ -26,7 +26,7 @@ const ALLOWED_TARGET_HOSTS = new Set([
   "cuttlinks.com",
   "cuttlinks.com",
   "trigonevo.com",
-  "rinku.pro"'
+  "rinku.pro",
   "7mb.io"
 ]);
 
