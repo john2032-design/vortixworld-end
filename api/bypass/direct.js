@@ -25,7 +25,9 @@ const ALLOWED_TARGET_HOSTS = new Set([
   "new.pandadevelopment.net",
   "cuttlinks.com",
   "cuttlinks.com",
-  "trigonevo.com"
+  "trigonevo.com",
+  "rinku.pro"'
+  "7mb.io"
 ]);
 
 const usedTokens = new Map();
