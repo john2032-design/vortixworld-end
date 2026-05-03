@@ -27,7 +27,17 @@ const ALLOWED_TARGET_HOSTS = new Set([
   "cuttlinks.com",
   "trigonevo.com",
   "rinku.pro",
-  "7mb.io"
+  "7mb.io",
+  "link-hub.net",
+  "direct-links.net",
+  "direct-links.org",
+  "link-to.net",
+  "direct-link.net",
+  "link-center.net",
+  "link-hub.net",
+  "link-target.net",
+  "link-target.org"
+  
 ]);
 
 const usedTokens = new Map();
